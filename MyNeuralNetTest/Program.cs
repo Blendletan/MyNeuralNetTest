@@ -4,6 +4,27 @@
     {
         static void Main(string[] args)
         {
+            double m = 3;
+            double b = 5;
+            var inputs = new List<List<double>>();
+            var outputs = new List<List<double>>();
+            for (double x = 0; x < 10; x += 0.1)
+            {
+                inputs.Add(new List<double>());
+                inputs.Last().Add(x);
+                outputs.Add(new List<double>());
+                double y = m*x+b;
+                outputs.Last().Add(y);
+            }
+            var data = new TrainingData(inputs, outputs);
+            Network n = new Network(data, 0, 0);
+            int numberOfEpochs = 10000;
+            n.Train(numberOfEpochs);
+            var weights = n.GetWeights();
+            foreach (var v in weights.Last())
+            {
+                Console.WriteLine(v);
+            }
             Console.WriteLine("Hello, World!");
         }
     }
@@ -155,7 +176,7 @@
     {
         List<Layer> layers;
         TrainingData data;
-        const double learningRate = 0.1;
+        const double learningRate = 0.0001;
         const double smallNumber = 0.0001;
         PRNG pRng;
         public Network(TrainingData d, int numberOfHiddenLayers, int sizeOfHiddenLayers)
@@ -165,6 +186,7 @@
             layers = new List<Layer>();
             int numberOfInputs = d.NumberOfInputVariables;
             var inputLayer = new Layer(numberOfInputs, true);
+            layers.Add(inputLayer);
             for (int i = 0; i < numberOfHiddenLayers; i++)
             {
                 var nextLayer = new Layer(sizeOfHiddenLayers, false);
@@ -173,6 +195,20 @@
             }
             var outputLayer = new Layer(d.NumberOfOutputVariables, false);
             Layer.ConnectLayers(layers.Last(), outputLayer);
+            layers.Add(outputLayer);
+        }
+        public List<List<double>> GetWeights()
+        {
+            var output = new List<List<double>>();
+            for (int i = 1; i < layers.Count; i++)
+            {
+                output.Add(new List<double>());
+                foreach (var v in layers[i].GetIncomingEdges())
+                {
+                    output.Last().Add(v.Weight);
+                }
+            }
+            return output;
         }
         public double GetTotalError()
         {
