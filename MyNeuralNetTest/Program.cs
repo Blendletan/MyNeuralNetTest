@@ -8,24 +8,38 @@
             double b = 5;
             var inputs = new List<List<double>>();
             var outputs = new List<List<double>>();
+            Random rng = new Random();
             for (double x = 0; x < 10; x += 0.1)
             {
                 inputs.Add(new List<double>());
                 inputs.Last().Add(x);
-                outputs.Add(new List<double>());
-                double y = m*x+b;
+                outputs.Add(new List<double>());a
+                double y = m*x+b+0.1*rng.NextDouble();
                 outputs.Last().Add(y);
             }
             var data = new TrainingData(inputs, outputs);
-            Network n = new Network(data, 0, 0);
+            Network n = new Network(data, 1, 10);
             int numberOfEpochs = 10000;
             n.Train(numberOfEpochs);
+            Console.WriteLine("Weights:");
             var weights = n.GetWeights();
-            foreach (var v in weights.Last())
+            for (int i = 0; i < weights.Count; i++)
             {
-                Console.WriteLine(v);
+                Console.WriteLine($"Layer {i}:");
+                foreach (var v in weights[i])
+                {
+                    Console.WriteLine(v);
+                }
             }
-            Console.WriteLine("Hello, World!");
+            double testX = 100 * rng.NextDouble();
+            double[] testInput = new double[] { testX, 1 };
+            double testY = m * testX + b;
+            Console.WriteLine($"Testing on input {testX}");
+            Console.WriteLine($"ExpectedResult is {testY}");
+            var testOutput = n.GetOutputs(testInput);
+            Console.WriteLine($"Neural net predicted {testOutput[0]}");
+            double error = Math.Abs(testY - testOutput[0]);
+            Console.WriteLine($"Error was {error}");
         }
     }
     internal class PRNG
@@ -109,7 +123,7 @@
         }
         private double ActivationFunction(double input)
         {
-            return input;
+            return Math.Max(0,input);
         }
     }
     internal class Edge
@@ -176,8 +190,8 @@
     {
         List<Layer> layers;
         TrainingData data;
-        const double learningRate = 0.0001;
-        const double smallNumber = 0.0001;
+        const double learningRate = 0.00001;
+        const double smallNumber = 0.00001;
         PRNG pRng;
         public Network(TrainingData d, int numberOfHiddenLayers, int sizeOfHiddenLayers)
         {
