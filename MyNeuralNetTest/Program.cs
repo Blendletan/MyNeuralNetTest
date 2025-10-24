@@ -13,7 +13,7 @@
             {
                 inputs.Add(new List<double>());
                 inputs.Last().Add(x);
-                outputs.Add(new List<double>());a
+                outputs.Add(new List<double>());
                 double y = m*x+b+0.1*rng.NextDouble();
                 outputs.Last().Add(y);
             }
