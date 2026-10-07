@@ -9,7 +9,7 @@
             var inputs = new List<List<double>>();
             var outputs = new List<List<double>>();
             Random rng = new Random();
-            for (double x = 0; x < 10; x += 0.1)
+            for (double x = -10; x < 10; x += 0.1)
             {
                 inputs.Add(new List<double>());
                 inputs.Last().Add(x);
@@ -119,7 +119,7 @@
             {
                 output += v.input.GetOutput() * v.Weight;
             }
-            return output;
+            return ActivationFunction(output);
         }
         private double ActivationFunction(double input)
         {
