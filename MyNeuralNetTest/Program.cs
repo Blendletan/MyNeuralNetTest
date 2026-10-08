@@ -59,12 +59,14 @@
     internal class Node
     {
         readonly bool isInitial;
+        public bool isTerminal;
         double? inputValue;
         public List<Edge>? IncomingEdges { get; private set; }
         readonly Guid id;
         public Node(double input)
         {
             isInitial = true;
+            isTerminal = false;
             inputValue = input;
             IncomingEdges = null;
             id = Guid.NewGuid();
@@ -72,6 +74,7 @@
         public Node(bool b)
         {
             isInitial = b;
+            isTerminal = false;
             if (isInitial)
             {
                 IncomingEdges = null;
@@ -118,6 +121,10 @@
             foreach (var v in IncomingEdges)
             {
                 output += v.input.GetOutput() * v.Weight;
+            }
+            if (!isTerminal)
+            {
+                return output;
             }
             return ActivationFunction(output);
         }
@@ -210,6 +217,11 @@
             var outputLayer = new Layer(d.NumberOfOutputVariables, false);
             Layer.ConnectLayers(layers.Last(), outputLayer);
             layers.Add(outputLayer);
+            foreach(var n in outputLayer.neurons)
+            {
+                n.isTerminal = true;
+            }
+            
         }
         public List<List<double>> GetWeights()
         {
