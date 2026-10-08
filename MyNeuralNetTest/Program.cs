@@ -9,7 +9,7 @@
             var inputs = new List<List<double>>();
             var outputs = new List<List<double>>();
             Random rng = new Random();
-            for (double x = -10; x < 10; x += 0.1)
+            for (double x = -5; x < 5; x += 0.1)
             {
                 inputs.Add(new List<double>());
                 inputs.Last().Add(x);
@@ -19,7 +19,7 @@
             }
             var data = new TrainingData(inputs, outputs);
             Network n = new Network(data, 1, 10);
-            int numberOfEpochs = 10000;
+            int numberOfEpochs = 1000;
             n.Train(numberOfEpochs);
             Console.WriteLine("Weights:");
             var weights = n.GetWeights();
@@ -111,7 +111,7 @@
                 {
                     throw new Exception($"Impoperly initialized input neuron {id}, does not contain input value");
                 }
-                return ActivationFunction(inputValue.Value);
+                return inputValue.Value;
             }
             if (IncomingEdges == null)
             {
@@ -122,7 +122,7 @@
             {
                 output += v.input.GetOutput() * v.Weight;
             }
-            if (!isTerminal)
+            if (isTerminal)
             {
                 return output;
             }
