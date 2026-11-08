@@ -1,0 +1,1 @@
+A very dumb slow implementation of a Feedforward Nueral Network, designed to illustrate the concept to beginners.

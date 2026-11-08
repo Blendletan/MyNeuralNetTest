@@ -1,45 +1,80 @@
-﻿namespace MyNeuralNetTest
+﻿using System.Net;
+using System.Text;
+
+namespace MyNeuralNetTest
 {
     internal class Program
     {
+        static List<double> ExampleTestFunction(List<double> input)
+        {
+            if (input.Count != 2)
+            {
+                throw new Exception("Invalid input");
+            }
+            var output = new List<double>();
+            var x = input[0];
+            var y = input[1];
+            var outputValue = Math.Sin(x) * Math.Exp(y);
+            output.Add(outputValue);
+            return output;
+        }
+        static double Train(int numberOfEpochs)
+        {
+            //We shall do an example, learning the function f(x,y)=sin(x)*e^y
+            //We shall have a sample size of 1000 points with -1 < x < 1, -1 < y < 1
+            var rng = new PRNG();
+            int numberOfSamples = 10;
+            var inputList = new List<List<double>>();
+            var outputList = new List<List<double>>();
+            for (int i = 0; i < numberOfSamples; i++)
+            {
+                var nextInput = new List<double>();
+                var x = rng.Uniform(-1, 1);
+                var y = rng.Uniform(-1, 1);
+                nextInput.Add(x);
+                nextInput.Add(y);
+                var nextOutput = ExampleTestFunction(nextInput);
+                inputList.Add(nextInput);
+                outputList.Add(nextOutput);
+            }
+            TrainingData data = new TrainingData(inputList, outputList);
+            var network = new Network(data, 1, 25);
+            network.Train(numberOfEpochs);
+            //now we evaluate our test function on some randomly chosen inputs
+            //we will see how close our network's predictions were
+            var errorList = new List<double>();
+            for (int i = 0; i < 10; i++)
+            {
+                var testInput = new List<double>();
+                var x = rng.Uniform(-1, 1);
+                var y = rng.Uniform(-1, 1);
+                testInput.Add(x);
+                testInput.Add(y);
+                var output = ExampleTestFunction(testInput).First();
+                var prediction = network.GetOutputs(testInput).First();
+                var error = Math.Abs(prediction - output);
+                errorList.Add(error);
+                Console.WriteLine($"For test {i}");
+                Console.WriteLine($"The x value was {x}, the y value was {y}");
+                Console.WriteLine($"The true value of Sin(x)*Exp(y) is {output}");
+                Console.WriteLine($"The neural net predicted {prediction}");
+                Console.WriteLine($"The error was {error}");
+                Console.WriteLine();
+            }
+            return errorList.Average();
+        }
         static void Main(string[] args)
         {
-            double m = 3;
-            double b = 5;
-            var inputs = new List<List<double>>();
-            var outputs = new List<List<double>>();
-            Random rng = new Random();
-            for (double x = -5; x < 5; x += 0.1)
+            var outputs = new List<(double, double)>();
+            for(int i=10;i<50000;i*=2)
             {
-                inputs.Add(new List<double>());
-                inputs.Last().Add(x);
-                outputs.Add(new List<double>());
-                double y = m*x+b+0.1*rng.NextDouble();
-                outputs.Last().Add(y);
+                double error = Train(i);
+                outputs.Add((i, error));
             }
-            var data = new TrainingData(inputs, outputs);
-            Network n = new Network(data, 1, 10);
-            int numberOfEpochs = 1000;
-            n.Train(numberOfEpochs);
-            Console.WriteLine("Weights:");
-            var weights = n.GetWeights();
-            for (int i = 0; i < weights.Count; i++)
+            foreach(var v in outputs)
             {
-                Console.WriteLine($"Layer {i}:");
-                foreach (var v in weights[i])
-                {
-                    Console.WriteLine(v);
-                }
+                Console.WriteLine($"For {v.Item1} training epochs error was {v.Item2}");
             }
-            double testX = 100 * rng.NextDouble();
-            double[] testInput = new double[] { testX, 1 };
-            double testY = m * testX + b;
-            Console.WriteLine($"Testing on input {testX}");
-            Console.WriteLine($"ExpectedResult is {testY}");
-            var testOutput = n.GetOutputs(testInput);
-            Console.WriteLine($"Neural net predicted {testOutput[0]}");
-            double error = Math.Abs(testY - testOutput[0]);
-            Console.WriteLine($"Error was {error}");
         }
     }
     internal class PRNG
@@ -58,8 +93,8 @@
     }
     internal class Node
     {
-        readonly bool isInitial;
-        public bool isTerminal;
+        public readonly bool isInitial;
+        public readonly bool isTerminal;
         double? inputValue;
         public List<Edge>? IncomingEdges { get; private set; }
         readonly Guid id;
@@ -71,10 +106,10 @@
             IncomingEdges = null;
             id = Guid.NewGuid();
         }
-        public Node(bool b)
+        public Node(bool initial,bool final)
         {
-            isInitial = b;
-            isTerminal = false;
+            isInitial = initial;
+            isTerminal = final;
             if (isInitial)
             {
                 IncomingEdges = null;
@@ -161,12 +196,12 @@
     internal class Layer
     {
         public List<Node> neurons;
-        public Layer(int numberOfNeurons, bool isInitial)
+        public Layer(int numberOfNeurons, bool isInitial,bool isFinal)
         {
             neurons = new List<Node>();
             for (int i = 0; i < numberOfNeurons; i++)
             {
-                neurons.Add(new Node(isInitial));
+                neurons.Add(new Node(isInitial,isFinal));
             }
         }
         public List<Edge> GetIncomingEdges()
@@ -174,6 +209,10 @@
             var output = new List<Edge>();
             foreach (var n in neurons)
             {
+                if (n.isInitial)
+                {
+                    throw new Exception("Tried to get input from input neuron");
+                }
                 foreach (var incoming in n.IncomingEdges)
                 {
                     output.Add(incoming);
@@ -206,22 +245,17 @@
             data = d;
             layers = new List<Layer>();
             int numberOfInputs = d.NumberOfInputVariables;
-            var inputLayer = new Layer(numberOfInputs, true);
+            var inputLayer = new Layer(numberOfInputs, true,false);
             layers.Add(inputLayer);
             for (int i = 0; i < numberOfHiddenLayers; i++)
             {
-                var nextLayer = new Layer(sizeOfHiddenLayers, false);
+                var nextLayer = new Layer(sizeOfHiddenLayers, false,false);
                 Layer.ConnectLayers(layers.Last(), nextLayer);
                 layers.Add(nextLayer);
             }
-            var outputLayer = new Layer(d.NumberOfOutputVariables, false);
+            var outputLayer = new Layer(d.NumberOfOutputVariables, false,true);
             Layer.ConnectLayers(layers.Last(), outputLayer);
             layers.Add(outputLayer);
-            foreach(var n in outputLayer.neurons)
-            {
-                n.isTerminal = true;
-            }
-            
         }
         public List<List<double>> GetWeights()
         {
@@ -323,12 +357,26 @@
             }
             return output.ToArray();
         }
-        public double[] GetOutputs(double[] inputs)
+        private double[] GetOutputs(double[] inputs)
         {
             UpdateInputs(inputs);
             return GetOutputs();
         }
-        public void UpdateInputs(double[] inputs)
+        public double[] GetOutputs(List<double> inputs)
+        {
+            UpdateInputs(inputs);
+            return GetOutputs();
+        }
+        private void UpdateInputs(List<double> inputs)
+        {
+            if (layers.First().neurons.Count != inputs.Count + 1)
+            {
+                throw new Exception("Invalid number of input variables");
+            }
+            inputs.Add(1);
+            UpdateInputs(inputs.ToArray());
+        }
+        private void UpdateInputs(double[] inputs)
         {
             if (layers.First().neurons.Count != inputs.Length)
             {
